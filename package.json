@@ -16,6 +16,7 @@
     "react-hook-form": "^7.44.3",
     "react-native": "0.71.8",
     "react-native-braintree-payments-drop-in": "^1.2.0",
+    "react-native-braintree-xplat": "^4.0.0",
     "react-native-collapsible": "^1.6.1",
     "react-native-elements": "^3.4.3",
     "react-native-hook-form": "^1.0.12",

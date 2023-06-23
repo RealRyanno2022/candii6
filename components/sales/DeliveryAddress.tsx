@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, KeyboardAvoidingView, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import axios from 'axios';
-import BraintreeDropIn from 'react-native-braintree-payments-drop-in';
+import dropin from 'braintree-web-drop-in';
 
 import ShopHeader from '../shop/ShopHeader';
 import FormInput from './FormInput';
@@ -18,6 +18,20 @@ type UserData = {
   lastName: string;
   addressLineTwo: string;
 };
+
+export const BraintreeDropin = ({ clientToken }) => {
+  const dropinContainer = useRef(null);
+
+  useEffect(() => {
+    if (clientToken) {
+      dropin.create({
+        authorization: clientToken,
+        container: dropinContainer.current
+      }, function (createErr, instance) {
+        // handle errors, etc...
+      });
+    }
+  }, [clientToken]);
 
 const DeliveryAddress: React.FC = ({ navigation }) => {
   const { control, handleSubmit } = useForm<UserData>();
@@ -81,6 +95,7 @@ const DeliveryAddress: React.FC = ({ navigation }) => {
     <View style={{ flex: 1 }}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.container}>
+          <div ref={dropinContainer} />
           <ShopHeader navigation={navigation} />
           <ScrollView contentContainerStyle={{ paddingBottom: 100 }} bounces={false}>
             <View style={{ paddingBottom: 100 }}>
