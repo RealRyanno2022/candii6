@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, KeyboardAvoidingView, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { SQIPCardEntry } from 'react-native-square-in-app-payments';
 import axios from 'axios';
-import dropin from 'braintree-web-drop-in';
 
 import ShopHeader from '../shop/ShopHeader';
 import FormInput from './FormInput';
@@ -19,21 +19,11 @@ type UserData = {
   addressLineTwo: string;
 };
 
-export const BraintreeDropin = ({ clientToken }) => {
-  const dropinContainer = useRef(null);
+type DeliveryAddressProps = {
+  navigation: any;
+};
 
-  useEffect(() => {
-    if (clientToken) {
-      dropin.create({
-        authorization: clientToken,
-        container: dropinContainer.current
-      }, function (createErr, instance) {
-        // handle errors, etc...
-      });
-    }
-  }, [clientToken]);
-
-const DeliveryAddress: React.FC = ({ navigation }) => {
+const DeliveryAddress: React.FC<DeliveryAddressProps> = ({ navigation }) => {
   const { control, handleSubmit } = useForm<UserData>();
   const [country, setCountry] = useState('');
 
@@ -44,10 +34,14 @@ const DeliveryAddress: React.FC = ({ navigation }) => {
     { name: 'phoneNumber', label: 'Phone Number', placeholder: 'Phone number' },
     { name: 'address', label: 'Address', placeholder: 'House / Apartment Number' },
     { name: 'addressLineTwo', label: 'Address Line 2', placeholder: 'Street' },
-    { name: 'addressLineThree', label: 'Address Line 3', placeholder: 'Town / City'},
+    { name: 'addressLineThree', label: 'Address Line 3', placeholder: 'Town / City' },
     { name: 'state', label: 'State', placeholder: 'County / State' },
     { name: 'country', label: 'Country', placeholder: 'Country', setCountry },
     { name: 'postCode', label: 'Post Code', placeholder: 'Post code' },
+    { name: 'cardNumber', label: 'Card Number', placeholder: 'Card number' },
+    { name: 'expirationMonth', label: 'Expiration Month', placeholder: 'MM' },
+    { name: 'expirationYear', label: 'Expiration Year', placeholder: 'YYYY' },
+    { name: 'cvv', label: 'CVV', placeholder: 'CVV' },
   ];
 
   const axiosInstance = axios.create({
@@ -71,35 +65,55 @@ const DeliveryAddress: React.FC = ({ navigation }) => {
     }
   };
 
-  const handleBraintreePayment = async () => {
-    try {
-      const clientToken = await axiosInstance.get('https://candii4-backend2-3f9abaacb350.herokuapp.com/client_token');
-      const nonce = await BraintreeDropIn.show({
-        clientToken: clientToken.data,
-      });
-  
-      await axiosInstance.post('https://candii4-backend2-3f9abaacb350.herokuapp.com/checkout', {
-        payment_method_nonce: nonce,
-      });
-    } catch (error) {
-      console.error('Error in Braintree payment:', error);
-    }
+  const onSubmit: SubmitHandler<UserData> = async (data) => {
+    console.log('onSubmit pressed');
+    await saveUserInformation(data);
+    await startSquareCardEntry();
   };
 
-  const onSubmit: SubmitHandler<UserData> = async (data) => {
-    await saveUserInformation(data);
-    handleBraintreePayment();
+  const startSquareCardEntry = async () => {
+    try {
+      const result = await SQIPCardEntry.startCardEntryFlow();
+      if (result.isSuccess) {
+        // Handle successful card entry
+        console.log('Card entry successful:', result.cardDetails);
+      } else if (result.isCanceled) {
+        // Handle canceled card entry
+        console.log('Card entry canceled');
+      } else {
+        // Handle card entry error
+        console.log('Card entry error:', result.error);
+      }
+    } catch (error) {
+      // Handle card entry exception
+      console.log('Card entry exception:', error);
+    }
   };
+  
+
+  
 
   return (
     <View style={{ flex: 1 }}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.container}>
-          <div ref={dropinContainer} />
           <ShopHeader navigation={navigation} />
           <ScrollView contentContainerStyle={{ paddingBottom: 100 }} bounces={false}>
             <View style={{ paddingBottom: 100 }}>
-              {fields.map(field => (
+              <Text style={styles.sectionTitle}>Delivery Info</Text>
+              {fields.slice(0, 10).map((field) => (
+                <FormInput
+                  key={field.name}
+                  name={field.name}
+                  label={field.label}
+                  placeholder={field.placeholder}
+                  control={control}
+                  style={styles.formFieldsText}
+                  setCountry={field.setCountry} // If setCountry is not defined, it won't affect anything
+                />
+              ))}
+              <Text style={styles.sectionTitle}>Payment Info</Text>
+              {fields.slice(10).map((field) => (
                 <FormInput
                   key={field.name}
                   name={field.name}
@@ -125,6 +139,14 @@ const styles = StyleSheet.create({
   container: {
     justifyContent: 'center',
     width: '100%',
+    backgroundColor: '#FCCC7C',
+  },
+  sectionTitle: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginVertical: 20,
   },
   button: {
     alignSelf: 'center',

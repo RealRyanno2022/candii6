@@ -32,6 +32,7 @@ type Subscription = {
 export type StackParamList = {
   AccountInfo: { userId: number };
   CustomerBasket: { email?: string };
+  PaymentPage: undefined;
   EditEmail: undefined;
   EditEmailDeliveryAddress: undefined;
   // TestPayments: undefined;
